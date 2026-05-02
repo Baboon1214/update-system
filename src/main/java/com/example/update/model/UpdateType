@@ -1,0 +1,7 @@
+package com.example.update.model;
+
+public enum UpdateType {
+    OPTIONAL,
+    RECOMMENDED,
+    FORCE
+}
