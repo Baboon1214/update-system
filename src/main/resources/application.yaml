@@ -1,15 +1,21 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: jdbc:postgresql://localhost:5432/update_system  # Убедись, что у тебя база данных с таким именем существует
+    driver-class-name: org.postgresql.Driver
+    username: postgres  # Логин PostgreSQL
+    password: 1234  # Пароль PostgreSQL (убедись, что это безопасно в продакшн среде)
+    hikari:
+      maximum-pool-size: 10  # Максимальное количество соединений в пуле (можно настроить под нагрузку)
 
   jpa:
     hibernate:
-      ddl-auto: update   # Это гарантирует, что Hibernate обновит структуру базы данных при запуске
-    show-sql: true
+      ddl-auto: update  # В продакшн лучше использовать 'validate' или 'none', чтобы избежать потери данных
+    show-sql: true  # Для отладки, в продакшн стоит отключить
+    properties:
+      hibernate:
+        format_sql: true  # Для удобства чтения SQL запросов
 
+  # Отключаем H2 консоль для PostgreSQL
   h2:
     console:
-      enabled: true
+      enabled: false

@@ -1,4 +1,4 @@
-package com.example.update.model;
+package com.example.update.enums;
 
 public enum UpdateType {
     OPTIONAL,

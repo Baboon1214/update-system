@@ -26,7 +26,8 @@ public class UpdateController {
     ) {
 
         AppVersion latest = repository
-                .findTopByPlatformAndActiveTrueOrderByReleaseDateDesc(platform);
+                .findTopByPlatformAndActiveTrueOrderByReleaseDateDesc(platform)
+                .orElse(null);
 
         UpdateResponse response = new UpdateResponse();
 
