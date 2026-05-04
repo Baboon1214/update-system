@@ -1,12 +1,10 @@
 package com.example.update.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
-
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Table(name = "app_versions")
 public class AppVersion {
 
     @Id
@@ -16,13 +14,30 @@ public class AppVersion {
     private String version;
     private String platform;
     private LocalDateTime releaseDate;
-
-    @Column(length = 1000)
+    @Column(length = 2000)
     private String changelog;
-
     private String updateType;
+    private boolean active = true;
 
-    private boolean active;
+    // Геттеры и сеттеры
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    private boolean forceUpdate;  // Добавляем новое поле
+    public String getVersion() { return version; }
+    public void setVersion(String version) { this.version = version; }
+
+    public String getPlatform() { return platform; }
+    public void setPlatform(String platform) { this.platform = platform; }
+
+    public LocalDateTime getReleaseDate() { return releaseDate; }
+    public void setReleaseDate(LocalDateTime releaseDate) { this.releaseDate = releaseDate; }
+
+    public String getChangelog() { return changelog; }
+    public void setChangelog(String changelog) { this.changelog = changelog; }
+
+    public String getUpdateType() { return updateType; }
+    public void setUpdateType(String updateType) { this.updateType = updateType; }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 }

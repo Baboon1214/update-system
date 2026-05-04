@@ -25,7 +25,7 @@ public class AuthController {
 
     // ← ИСПРАВЛЕННЫЙ КОНСТРУКТОР
     public AuthController(UserRepository userRepository, RoleRepository roleRepository,
-                          BCryptPasswordEncoder encoder, JwtUtil jwtUtil) {
+                BCryptPasswordEncoder encoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.encoder = encoder;
@@ -33,35 +33,35 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody AuthRequest request) {
-        
-        System.out.println("=== REGISTER ===");
-        System.out.println("Username: " + request.getUsername());
-        
-        if (userRepository.findByUsername(request.getUsername()) != null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("User already exists");
-        }
-
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setPassword(encoder.encode(request.getPassword()));
-        user.setEnabled(true);
-
-        Role userRole = roleRepository.findByName("USER");
-        if (userRole == null) {
-            userRole = new Role();
-            userRole.setName("USER");
-            roleRepository.save(userRole);
-        }
-        user.setRoles(Set.of(userRole));
-
-        userRepository.save(user);
-        System.out.println("User registered!");
-
-        return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+public ResponseEntity<?> register(@RequestBody AuthRequest request) {
+    
+    System.out.println("=== REGISTER ===");
+    System.out.println("Username: " + request.getUsername());
+    
+    if (userRepository.findByUsername(request.getUsername()) != null) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body("User already exists");
     }
 
+    User user = new User();
+    user.setUsername(request.getUsername());
+    user.setPassword(encoder.encode(request.getPassword()));
+    user.setEnabled(true);
+
+    // Исправленный блок получения/создания роли USER
+    Role userRole = roleRepository.findByName("USER")
+            .orElseGet(() -> {
+                Role newRole = new Role("USER");
+                return roleRepository.save(newRole);
+            });
+    
+    user.setRoles(Set.of(userRole));
+
+    userRepository.save(user);
+    System.out.println("User registered!");
+
+    return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+}
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
         

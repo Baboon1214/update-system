@@ -1,7 +1,0 @@
-package com.example.update.enums;
-
-public enum UpdateType {
-    OPTIONAL,
-    RECOMMENDED,
-    FORCE
-}
