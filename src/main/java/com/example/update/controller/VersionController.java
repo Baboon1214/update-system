@@ -3,6 +3,7 @@ package com.example.update.controller;
 import com.example.update.dto.AppVersionRequest;
 import com.example.update.model.AppVersion;
 import com.example.update.repository.AppVersionRepository;
+import com.example.update.service.TelegramNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -23,9 +24,12 @@ public class VersionController {
 
     private static final Logger log = LoggerFactory.getLogger(VersionController.class);
     private final AppVersionRepository repository;
+    private final TelegramNotificationService telegramService;
 
-    public VersionController(AppVersionRepository repository) {
+    // Исправленный конструктор с двумя зависимостями
+    public VersionController(AppVersionRepository repository, TelegramNotificationService telegramService) {
         this.repository = repository;
+        this.telegramService = telegramService;
     }
 
     @PostMapping
@@ -42,6 +46,17 @@ public class VersionController {
 
         AppVersion saved = repository.save(version);
         log.info("Version created with id: {}", saved.getId());
+
+        // Отправка уведомления в Telegram
+        String message = String.format(
+            "📢 Новая версия приложения!\nВерсия: %s\nПлатформа: %s\nТип: %s\nОписание: %s",
+            saved.getVersion(),
+            saved.getPlatform(),
+            saved.getUpdateType(),
+            saved.getChangelog()
+        );
+        telegramService.sendMessage(message);
+
         return ResponseEntity.ok(saved);
     }
 

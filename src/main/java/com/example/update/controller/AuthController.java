@@ -89,4 +89,15 @@ public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServ
     // Можно вернуть пустой ответ или сообщение, но тело необязательно
     return ResponseEntity.ok().body("Authenticated");
     }
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("JWT_TOKEN", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(false);      // для локальной разработки
+        cookie.setPath("/");
+        cookie.setMaxAge(0);           // удаляем cookie
+        response.addCookie(cookie);
+        log.info("User logged out, cookie cleared");
+        return ResponseEntity.ok("Logged out");
+    }
 }
