@@ -30,14 +30,14 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all users")
+    @Operation(summary = "Получить всех пользователей")
     public List<User> getAllUsers() {
         log.info("Fetching all users");
         return userRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get user by ID")
+    @Operation(summary = "Получить пользователя по ID")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         log.info("Fetching user with id: {}", id);
         return userRepository.findById(id)
@@ -46,7 +46,7 @@ public class UserController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a new user")
+    @Operation(summary = "Создать пользователя")
     public ResponseEntity<User> createUser(@Valid @RequestBody UserRequest request) {
         log.info("Creating new user with username: {}", request.getUsername());
 
@@ -61,7 +61,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update user by ID")
+    @Operation(summary = "Обновить пользователя по ID")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
         log.info("Updating user with id: {}", id);
 
@@ -80,7 +80,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete user by ID")
+    @Operation(summary = "Удалить пользователя по ID")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         log.warn("Deleting user with id: {}", id);
         if (!userRepository.existsById(id)) {

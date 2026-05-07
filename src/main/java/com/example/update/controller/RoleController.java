@@ -26,14 +26,14 @@ public class RoleController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all roles")
+    @Operation(summary = "Получать все роля")
     public List<Role> getAllRoles() {
         log.info("Fetching all roles");
         return roleRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get role by ID")
+    @Operation(summary = "Получить все роля по ID")
     public ResponseEntity<Role> getRoleById(@PathVariable Long id) {
         log.info("Fetching role id: {}", id);
         return roleRepository.findById(id)
@@ -42,7 +42,7 @@ public class RoleController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a new role")
+    @Operation(summary = "Создать роль")
     public ResponseEntity<Role> createRole(@Valid @RequestBody Role role) {
         log.info("Creating new role: {}", role.getName());
         Role saved = roleRepository.save(role);
@@ -50,7 +50,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update role by ID")
+    @Operation(summary = "Обновить роль по ID")
     public ResponseEntity<Role> updateRole(@PathVariable Long id, @Valid @RequestBody Role role) {
         log.info("Updating role id: {}", id);
         return roleRepository.findById(id)
@@ -64,7 +64,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete role by ID")
+    @Operation(summary = "Удалить роль по ID")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         log.warn("Deleting role id: {}", id);
         if (!roleRepository.existsById(id)) {

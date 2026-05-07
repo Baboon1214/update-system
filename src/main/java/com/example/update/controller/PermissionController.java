@@ -26,14 +26,14 @@ public class PermissionController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all permissions")
+    @Operation(summary = "Получить все права доступа")
     public List<Permission> getAllPermissions() {
         log.info("Fetching all permissions");
         return permissionRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get permission by ID")
+    @Operation(summary = "Получить права доступа по ID")
     public ResponseEntity<Permission> getPermissionById(@PathVariable Long id) {
         log.info("Fetching permission id: {}", id);
         return permissionRepository.findById(id)
@@ -42,7 +42,7 @@ public class PermissionController {
     }
 
     @PostMapping
-    @Operation(summary = "Create a new permission")
+    @Operation(summary = "Создать права доступа")
     public ResponseEntity<Permission> createPermission(@Valid @RequestBody Permission permission) {
         log.info("Creating new permission: {}", permission.getName());
         Permission saved = permissionRepository.save(permission);
@@ -50,7 +50,7 @@ public class PermissionController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update permission by ID")
+    @Operation(summary = "Обновить права доступа по ID")
     public ResponseEntity<Permission> updatePermission(@PathVariable Long id, @Valid @RequestBody Permission permission) {
         log.info("Updating permission id: {}", id);
         return permissionRepository.findById(id)
@@ -64,7 +64,7 @@ public class PermissionController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete permission by ID")
+    @Operation(summary = "Удалить права доступа по ID")
     public ResponseEntity<Void> deletePermission(@PathVariable Long id) {
         log.warn("Deleting permission id: {}", id);
         if (!permissionRepository.existsById(id)) {
