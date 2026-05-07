@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,14 +31,16 @@ public class UserController {
     }
 
     @GetMapping
-    @Operation(summary = "Получить всех пользователей")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить всех пользователей (только для ADMIN)")
     public List<User> getAllUsers() {
         log.info("Fetching all users");
         return userRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Получить пользователя по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить пользователя по ID (только для ADMIN)")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         log.info("Fetching user with id: {}", id);
         return userRepository.findById(id)
@@ -46,7 +49,8 @@ public class UserController {
     }
 
     @PostMapping
-    @Operation(summary = "Создать пользователя")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Создать пользователя (только для ADMIN)")
     public ResponseEntity<User> createUser(@Valid @RequestBody UserRequest request) {
         log.info("Creating new user with username: {}", request.getUsername());
 
@@ -54,6 +58,7 @@ public class UserController {
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setEnabled(request.isEnabled());
+        // Роль не назначается автоматически, нужно добавить через БД
 
         User savedUser = userRepository.save(user);
         log.info("User created with id: {}", savedUser.getId());
@@ -61,7 +66,8 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Обновить пользователя по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Обновить пользователя по ID (только для ADMIN)")
     public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
         log.info("Updating user with id: {}", id);
 
@@ -80,7 +86,8 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить пользователя по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Удалить пользователя по ID (только для ADMIN)")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         log.warn("Deleting user with id: {}", id);
         if (!userRepository.existsById(id)) {

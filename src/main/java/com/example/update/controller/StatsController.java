@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,14 +28,16 @@ public class StatsController {
     }
 
     @GetMapping("/updates")
-    @Operation(summary = "Получить статистику распространения версий")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить статистику распространения версий (только для ADMIN)")
     public List<UpdateStatsDTO> getUpdateStats() {
         log.info("Fetching update statistics");
         return statsService.getUpdateStats();
     }
 
     @GetMapping("/export/csv")
-    @Operation(summary = "Экспорт статистики в CSV")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Экспорт статистики в CSV (только для ADMIN)")
     public ResponseEntity<String> exportCsv() {
         log.info("Exporting statistics to CSV");
         List<UpdateStatsDTO> stats = statsService.getUpdateStats();

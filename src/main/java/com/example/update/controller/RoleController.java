@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,14 +27,16 @@ public class RoleController {
     }
 
     @GetMapping
-    @Operation(summary = "Получать все роля")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить все роли (только для ADMIN)")
     public List<Role> getAllRoles() {
         log.info("Fetching all roles");
         return roleRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Получить все роля по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить роль по ID (только для ADMIN)")
     public ResponseEntity<Role> getRoleById(@PathVariable Long id) {
         log.info("Fetching role id: {}", id);
         return roleRepository.findById(id)
@@ -42,7 +45,8 @@ public class RoleController {
     }
 
     @PostMapping
-    @Operation(summary = "Создать роль")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Создать роль (только для ADMIN)")
     public ResponseEntity<Role> createRole(@Valid @RequestBody Role role) {
         log.info("Creating new role: {}", role.getName());
         Role saved = roleRepository.save(role);
@@ -50,13 +54,13 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Обновить роль по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Обновить роль по ID (только для ADMIN)")
     public ResponseEntity<Role> updateRole(@PathVariable Long id, @Valid @RequestBody Role role) {
         log.info("Updating role id: {}", id);
         return roleRepository.findById(id)
                 .map(existing -> {
                     existing.setName(role.getName());
-                    // если нужно обновлять permissions, добавьте логику
                     Role updated = roleRepository.save(existing);
                     return ResponseEntity.ok(updated);
                 })
@@ -64,7 +68,8 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить роль по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Удалить роль по ID (только для ADMIN)")
     public ResponseEntity<Void> deleteRole(@PathVariable Long id) {
         log.warn("Deleting role id: {}", id);
         if (!roleRepository.existsById(id)) {

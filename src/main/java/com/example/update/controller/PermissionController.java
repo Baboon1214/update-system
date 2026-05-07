@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,14 +27,16 @@ public class PermissionController {
     }
 
     @GetMapping
-    @Operation(summary = "Получить все права доступа")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить все права доступа (только для ADMIN)")
     public List<Permission> getAllPermissions() {
         log.info("Fetching all permissions");
         return permissionRepository.findAll();
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Получить права доступа по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Получить права доступа по ID (только для ADMIN)")
     public ResponseEntity<Permission> getPermissionById(@PathVariable Long id) {
         log.info("Fetching permission id: {}", id);
         return permissionRepository.findById(id)
@@ -42,7 +45,8 @@ public class PermissionController {
     }
 
     @PostMapping
-    @Operation(summary = "Создать права доступа")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Создать права доступа (только для ADMIN)")
     public ResponseEntity<Permission> createPermission(@Valid @RequestBody Permission permission) {
         log.info("Creating new permission: {}", permission.getName());
         Permission saved = permissionRepository.save(permission);
@@ -50,7 +54,8 @@ public class PermissionController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Обновить права доступа по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Обновить права доступа по ID (только для ADMIN)")
     public ResponseEntity<Permission> updatePermission(@PathVariable Long id, @Valid @RequestBody Permission permission) {
         log.info("Updating permission id: {}", id);
         return permissionRepository.findById(id)
@@ -64,7 +69,8 @@ public class PermissionController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить права доступа по ID")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Удалить права доступа по ID (только для ADMIN)")
     public ResponseEntity<Void> deletePermission(@PathVariable Long id) {
         log.warn("Deleting permission id: {}", id);
         if (!permissionRepository.existsById(id)) {

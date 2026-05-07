@@ -3,7 +3,6 @@ package com.example.update.controller;
 import com.example.update.dto.AppVersionRequest;
 import com.example.update.model.AppVersion;
 import com.example.update.repository.AppVersionRepository;
-import com.example.update.service.TelegramNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -11,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,16 +24,29 @@ public class VersionController {
 
     private static final Logger log = LoggerFactory.getLogger(VersionController.class);
     private final AppVersionRepository repository;
-    private final TelegramNotificationService telegramService;
 
-    // Исправленный конструктор с двумя зависимостями
-    public VersionController(AppVersionRepository repository, TelegramNotificationService telegramService) {
+    public VersionController(AppVersionRepository repository) {
         this.repository = repository;
-        this.telegramService = telegramService;
+    }
+
+    @GetMapping
+    @Operation(summary = "Получить все версии", description = "Доступно всем авторизованным пользователям")
+    public List<AppVersion> getAll() {
+        log.debug("Fetching all versions");
+        return repository.findAll();
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Получить версию по ID", description = "Доступно всем авторизованным пользователям")
+    public AppVersion getById(@PathVariable Long id) {
+        log.debug("Fetching version by id: {}", id);
+        return repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found"));
     }
 
     @PostMapping
-    @Operation(summary = "Создать новую версию")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Создать новую версию (только для ADMIN)")
     public ResponseEntity<AppVersion> create(@Valid @RequestBody AppVersionRequest request) {
         log.info("Creating new version: {} for platform {}", request.getVersion(), request.getPlatform());
 
@@ -46,37 +59,12 @@ public class VersionController {
 
         AppVersion saved = repository.save(version);
         log.info("Version created with id: {}", saved.getId());
-
-        // Отправка уведомления в Telegram
-        String message = String.format(
-            "📢 Новая версия приложения!\nВерсия: %s\nПлатформа: %s\nТип: %s\nОписание: %s",
-            saved.getVersion(),
-            saved.getPlatform(),
-            saved.getUpdateType(),
-            saved.getChangelog()
-        );
-        telegramService.sendMessage(message);
-
         return ResponseEntity.ok(saved);
     }
 
-    @GetMapping
-    @Operation(summary = "Получить все версии")
-    public List<AppVersion> getAll() {
-        log.debug("Fetching all versions");
-        return repository.findAll();
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Получить версию по ID")
-    public AppVersion getById(@PathVariable Long id) {
-        log.debug("Fetching version by id: {}", id);
-        return repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found"));
-    }
-
     @PutMapping("/{id}")
-    @Operation(summary = "Обновить версию")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Обновить версию (только для ADMIN)")
     public AppVersion update(@PathVariable Long id, @Valid @RequestBody AppVersionRequest request) {
         log.info("Updating version id: {}", id);
         AppVersion version = repository.findById(id)
@@ -94,7 +82,8 @@ public class VersionController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Удалить версию")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Удалить версию (только для ADMIN)")
     public void delete(@PathVariable Long id) {
         log.warn("Deleting version id: {}", id);
         if (!repository.existsById(id)) {
@@ -105,7 +94,7 @@ public class VersionController {
     }
 
     @GetMapping("/latest")
-    @Operation(summary = "Последняя версия для платформы")
+    @Operation(summary = "Последняя версия для платформы", description = "Доступно всем авторизованным пользователям")
     public ResponseEntity<AppVersion> getLatest(@RequestParam String platform) {
         log.info("Getting latest version for platform: {}", platform);
         Optional<AppVersion> latest = repository.findTopByPlatformAndActiveTrueOrderByReleaseDateDesc(platform);
