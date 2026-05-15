@@ -24,43 +24,48 @@ public class JwtFilter extends OncePerRequestFilter {
         this.jwtUtil = jwtUtil;
     }
 
-@Override
-protected void doFilterInternal(HttpServletRequest request,
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
     HttpServletResponse response,
     FilterChain filterChain) throws ServletException, IOException {
 
-    String uri = request.getRequestURI();
-    if (uri.startsWith("/api/auth/") || uri.startsWith("/swagger-ui/") || uri.startsWith("/v3/api-docs/")) {
-        filterChain.doFilter(request, response);
-        return;
-    }
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/api/auth/") || uri.startsWith("/swagger-ui/") || uri.startsWith("/v3/api-docs/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-    String token = null;
-    Cookie[] cookies = request.getCookies();
-    if (cookies != null) {
-        for (Cookie cookie : cookies) {
-            if ("JWT_TOKEN".equals(cookie.getName())) {
-                token = cookie.getValue();
-                break;
+        String token = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("access_token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    break;
+                }
             }
         }
-    }
 
-    if (token == null) {
-        log.debug("No JWT cookie for URI: {}", uri);
+        if (token == null) {
+            log.debug("No JWT cookie for URI: {}", uri);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (jwtUtil.validateToken(token)) {
+            String username = jwtUtil.extractUsername(token);
+            // 👇 ПОЛУЧАЕМ ПРАВА (РОЛИ) ПОЛЬЗОВАТЕЛЯ ИЗ ТОКЕНА
+            var authorities = jwtUtil.extractAuthorities(token);
+            
+            // 👇 СОЗДАЁМ АУТЕНТИФИКАЦИЮ С ПРАВАМИ
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            
+            log.debug("Authenticated user: {} with authorities: {} for URI: {}", username, authorities, uri);
+        } else {
+            log.warn("Invalid JWT token in cookie for URI: {}", uri);
+        }
+
         filterChain.doFilter(request, response);
-        return;
-    }
-
-    if (jwtUtil.validateToken(token)) {
-        String username = jwtUtil.extractUsername(token);
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, null, null);
-        SecurityContextHolder.getContext().setAuthentication(auth);
-        log.debug("Authenticated user: {} for URI: {}", username, uri);
-    } else {
-        log.warn("Invalid JWT token in cookie for URI: {}", uri);
-    }
-
-    filterChain.doFilter(request, response);
     }
 }

@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface AppVersionRepository extends JpaRepository<AppVersion, Long> {
 
     Optional<AppVersion> findTopByPlatformAndActiveTrueOrderByReleaseDateDesc(String platform);
+    
+    Optional<AppVersion> findByPlatformAndVersion(String platform, String version);
 }

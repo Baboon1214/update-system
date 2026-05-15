@@ -3,6 +3,8 @@ package com.example.update.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 @Entity
 @Table(name = "app_versions")
 public class AppVersion {
@@ -13,6 +15,7 @@ public class AppVersion {
 
     private String version;
     private String platform;
+    @CreationTimestamp  // 👈 ДОБАВЬ ЭТУ СТРОКУ
     private LocalDateTime releaseDate;
     @Column(length = 2000)
     private String changelog;

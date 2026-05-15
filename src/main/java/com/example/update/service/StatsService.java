@@ -19,7 +19,8 @@ public class StatsService {
     private final AppVersionRepository appVersionRepository;
     private final UserDeviceRepository userDeviceRepository;
 
-    public StatsService(AppVersionRepository appVersionRepository, UserDeviceRepository userDeviceRepository) {
+    public StatsService(AppVersionRepository appVersionRepository, 
+                        UserDeviceRepository userDeviceRepository) {
         this.appVersionRepository = appVersionRepository;
         this.userDeviceRepository = userDeviceRepository;
     }
@@ -29,13 +30,19 @@ public class StatsService {
         List<AppVersion> versions = appVersionRepository.findAll();
         List<UserDevice> devices = userDeviceRepository.findAll();
 
-        long totalUsers = devices.stream().map(UserDevice::getUserId).distinct().count();
+        // 👇 ИЗМЕНЕНО: считаем уникальных пользователей по user.id
+        long totalUsers = devices.stream()
+                .map(device -> device.getUser().getId())
+                .distinct()
+                .count();
+        
         log.info("Total distinct users: {}", totalUsers);
 
         return versions.stream().map(version -> {
             UpdateStatsDTO dto = new UpdateStatsDTO();
             dto.setVersion(version.getVersion());
 
+            // 👇 ИЗМЕНЕНО: группируем по платформам, считаем устройства
             Map<String, Integer> usersCount = new HashMap<>();
             for (UserDevice device : devices) {
                 if (device.getCurrentVersion().equals(version.getVersion())) {
@@ -45,9 +52,13 @@ public class StatsService {
             }
             dto.setUsersCount(usersCount);
 
+            // 👇 ИЗМЕНЕНО: считаем уникальных пользователей на этой версии
             long versionUsers = devices.stream()
                     .filter(d -> d.getCurrentVersion().equals(version.getVersion()))
+                    .map(d -> d.getUser().getId())
+                    .distinct()
                     .count();
+                    
             dto.setGlobalUpdateRate(totalUsers > 0 ? (versionUsers * 100.0 / totalUsers) : 0.0);
 
             log.debug("Version {}: {} users, {:.2f}%", version.getVersion(), versionUsers, dto.getGlobalUpdateRate());

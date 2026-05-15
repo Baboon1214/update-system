@@ -4,6 +4,7 @@ import com.example.update.dto.AppVersionRequest;
 import com.example.update.model.AppVersion;
 import com.example.update.repository.AppVersionRepository;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -47,7 +48,10 @@ public class VersionController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Создать новую версию (только для ADMIN)")
-    public ResponseEntity<AppVersion> create(@Valid @RequestBody AppVersionRequest request) {
+    public ResponseEntity<AppVersion> create(
+            @Valid @RequestBody 
+            @Schema(example = "{\"version\":\"1.0.0\",\"platform\":\"android\",\"changelog\":\"First release\",\"updateType\":\"OPTIONAL\",\"active\":true}")
+            AppVersionRequest request) {
         log.info("Creating new version: {} for platform {}", request.getVersion(), request.getPlatform());
 
         AppVersion version = new AppVersion();
@@ -65,7 +69,11 @@ public class VersionController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Обновить версию (только для ADMIN)")
-    public AppVersion update(@PathVariable Long id, @Valid @RequestBody AppVersionRequest request) {
+    public AppVersion update(
+            @PathVariable Long id,
+            @Valid @RequestBody 
+            @Schema(example = "{\"version\":\"1.0.1\",\"platform\":\"android\",\"changelog\":\"Updated version\",\"updateType\":\"OPTIONAL\",\"active\":true}")
+            AppVersionRequest request) {
         log.info("Updating version id: {}", id);
         AppVersion version = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found"));

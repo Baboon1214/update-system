@@ -7,6 +7,7 @@ import com.example.update.repository.RoleRepository;
 import com.example.update.repository.UserRepository;
 import com.example.update.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -65,39 +66,123 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
     }
 
-@PostMapping("/login")
-public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletResponse response) {
-    log.info("Login attempt for username: {}", request.getUsername());
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request, HttpServletResponse response) {
+        log.info("Login attempt for username: {}", request.getUsername());
 
-    User user = userRepository.findByUsername(request.getUsername());
-    if (user == null || !encoder.matches(request.getPassword(), user.getPassword())) {
-        log.warn("Login failed - invalid credentials for: {}", request.getUsername());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        User user = userRepository.findByUsername(request.getUsername());
+        if (user == null || !encoder.matches(request.getPassword(), user.getPassword())) {
+            log.warn("Login failed - invalid credentials for: {}", request.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        }
+
+        // Генерируем два токена
+        String accessToken = jwtUtil.generateToken(user.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getUsername());
+
+        // Сохраняем refresh-токен в БД
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
+
+        // Cookie для access-токена (живёт 24 часа)
+        Cookie accessCookie = new Cookie("access_token", accessToken);
+        accessCookie.setHttpOnly(true);
+        accessCookie.setSecure(false);
+        accessCookie.setPath("/");
+        accessCookie.setMaxAge(24 * 60 * 60);
+        response.addCookie(accessCookie);
+
+        // Cookie для refresh-токена (живёт 7 дней)
+        Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(false);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(refreshCookie);
+
+        log.info("Login successful for user: {}", request.getUsername());
+        return ResponseEntity.ok().body("Authenticated");
     }
 
-    String token = jwtUtil.generateToken(user.getUsername());
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request, HttpServletResponse response) {
+        log.info("Refresh token request");
 
-    // Создаём HttpOnly cookie
-    Cookie cookie = new Cookie("JWT_TOKEN", token);
-    cookie.setHttpOnly(true);          // Недоступен для JavaScript (XSS защита)
-    cookie.setSecure(false);           // Для локальной разработки (true для HTTPS)
-    cookie.setPath("/");               // Доступен для всех эндпоинтов
-    cookie.setMaxAge(24 * 60 * 60);    // 24 часа (соответствует expiration токена)
-    response.addCookie(cookie);
+        // Берём refresh-токен из cookie
+        String refreshToken = null;
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("refresh_token".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
 
-    log.info("Login successful for user: {}", request.getUsername());
-    // Можно вернуть пустой ответ или сообщение, но тело необязательно
-    return ResponseEntity.ok().body("Authenticated");
+        if (refreshToken == null) {
+            log.warn("Refresh token missing");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Refresh token missing");
+        }
+
+        if (!jwtUtil.validateToken(refreshToken)) {
+            log.warn("Invalid refresh token");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Invalid refresh token");
+        }
+
+        String username = jwtUtil.extractUsername(refreshToken);
+        User user = userRepository.findByUsername(username);
+
+        if (user == null || !refreshToken.equals(user.getRefreshToken())) {
+            log.warn("Refresh token doesn't match stored token for user: {}", username);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Refresh token invalid");
+        }
+
+        // Генерируем новую пару токенов
+        String newAccessToken = jwtUtil.generateToken(username);
+        String newRefreshToken = jwtUtil.generateRefreshToken(username);
+
+        // Обновляем refresh-токен в БД
+        user.setRefreshToken(newRefreshToken);
+        userRepository.save(user);
+
+        // Устанавливаем новые cookie
+        Cookie accessCookie = new Cookie("access_token", newAccessToken);
+        accessCookie.setHttpOnly(true);
+        accessCookie.setSecure(false);
+        accessCookie.setPath("/");
+        accessCookie.setMaxAge(24 * 60 * 60);
+        response.addCookie(accessCookie);
+
+        Cookie refreshCookie = new Cookie("refresh_token", newRefreshToken);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(false);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(refreshCookie);
+
+        log.info("Tokens refreshed successfully for user: {}", username);
+        return ResponseEntity.ok().body("Tokens refreshed");
     }
+
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("JWT_TOKEN", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);      // для локальной разработки
-        cookie.setPath("/");
-        cookie.setMaxAge(0);           // удаляем cookie
-        response.addCookie(cookie);
-        log.info("User logged out, cookie cleared");
+        // Удаляем обе cookie
+        Cookie accessCookie = new Cookie("access_token", null);
+        accessCookie.setHttpOnly(true);
+        accessCookie.setSecure(false);
+        accessCookie.setPath("/");
+        accessCookie.setMaxAge(0);
+        response.addCookie(accessCookie);
+
+        Cookie refreshCookie = new Cookie("refresh_token", null);
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(false);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(0);
+        response.addCookie(refreshCookie);
+
+        log.info("User logged out, cookies cleared");
         return ResponseEntity.ok("Logged out");
     }
 }
