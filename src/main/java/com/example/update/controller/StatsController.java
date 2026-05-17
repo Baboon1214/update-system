@@ -7,7 +7,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -43,21 +42,28 @@ public class StatsController {
         List<UpdateStatsDTO> stats = statsService.getUpdateStats();
 
         StringBuilder csv = new StringBuilder();
-        csv.append("Version,Platform,UsersCount,GlobalUpdateRate(%)\n");
-
+        
+        // Заголовки с разделителем (точка с запятой для русской версии Excel)
+        csv.append("Version;Platform;UsersCount;UpdateRate(%)\n");
+        
+        // Данные
         for (UpdateStatsDTO dto : stats) {
             for (Map.Entry<String, Integer> entry : dto.getUsersCount().entrySet()) {
-                csv.append(dto.getVersion()).append(",")
-                        .append(entry.getKey()).append(",")
-                        .append(entry.getValue()).append(",")
-                        .append(String.format("%.2f", dto.getGlobalUpdateRate())).append("\n");
+                String version = dto.getVersion();
+                String platform = entry.getKey();
+                int usersCount = entry.getValue();
+                double updateRate = dto.getGlobalUpdateRate();
+                
+                csv.append(String.format("%s;%s;%d;%.2f\n", 
+                    version, platform, usersCount, updateRate));
             }
         }
 
-        log.info("CSV export completed, {} rows", stats.size());
+        log.info("CSV export completed");
+        
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=update_stats.csv")
-                .contentType(MediaType.TEXT_PLAIN)
+                .header("Content-Type", "text/csv; charset=windows-1251")
                 .body(csv.toString());
     }
 }

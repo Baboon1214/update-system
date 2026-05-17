@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -95,7 +96,7 @@ public class UpdateController {
     }
 
     @PostMapping("/log")
-    @Operation(summary = "Лог установки обновления")
+    @Operation(summary = "Лог установки обновления (обновляет версию устройства)")
     public String logUpdate(@RequestParam String platform,
                             @RequestParam String newVersion,
                             Authentication authentication) {
@@ -110,7 +111,6 @@ public class UpdateController {
         
         log.info("Log update: user={}, platform={}, newVersion={}", username, platform, newVersion);
 
-        // Проверка существования версии
         Optional<AppVersion> existingVersion = versionRepository
                 .findByPlatformAndVersion(platform, newVersion);
         
@@ -134,10 +134,11 @@ public class UpdateController {
     }
 
     @GetMapping("/current-version")
+    @Operation(summary = "Получить текущую версию устройства")
     public ResponseEntity<?> getCurrentVersion(@RequestParam String platform,
-                                               Authentication authentication) {
+        Authentication authentication) {
         if (!isValidPlatform(platform)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Invalid platform: " + platform + ". Allowed: " + ALLOWED_PLATFORMS);
         }
 
@@ -154,5 +155,98 @@ public class UpdateController {
             "currentVersion", device.get().getCurrentVersion(),
             "lastSeen", device.get().getLastSeen()
         ));
+    }
+
+    // ========== АДМИН МЕТОДЫ ==========
+
+    @DeleteMapping("/device/{userId}")
+    @Operation(summary = "Удалить устройство пользователя по ID и платформе (только ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteUserDeviceByAdmin(@PathVariable Long userId,
+                                                      @RequestParam String platform) {
+        
+        if (!isValidPlatform(platform)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Invalid platform: " + platform + ". Allowed: " + ALLOWED_PLATFORMS);
+        }
+
+        log.info("Admin deleting device: userId={}, platform={}", userId, platform);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "User not found with id: " + userId));
+
+        Optional<UserDevice> device = deviceRepository.findByUserAndPlatform(user, platform);
+        
+        if (device.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                "Device not found for user id: " + userId + " and platform: " + platform);
+        }
+
+        String deletedVersion = device.get().getCurrentVersion();
+        
+        // Полностью удаляем устройство
+        deviceRepository.delete(device.get());
+        
+        log.info("Admin deleted device (platform: {}, version: {}) for user id: {}", 
+                 platform, deletedVersion, userId);
+        
+        return ResponseEntity.ok().body(Map.of(
+            "message", "Device deleted successfully by admin",
+            "userId", userId,
+            "platform", platform,
+            "deletedVersion", deletedVersion
+        ));
+    }
+
+    @PutMapping("/device/{userId}")
+    @Operation(summary = "Обновить версию устройства у пользователя по ID (только ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUserDeviceByAdmin(@PathVariable Long userId,
+                                                      @RequestParam String platform,
+                                                      @RequestParam String newVersion) {
+        
+        if (!isValidPlatform(platform)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Invalid platform: " + platform + ". Allowed: " + ALLOWED_PLATFORMS);
+        }
+
+        log.info("Admin updating device: userId={}, platform={}, newVersion={}", 
+                 userId, platform, newVersion);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "User not found with id: " + userId));
+
+        Optional<AppVersion> existingVersion = versionRepository
+                .findByPlatformAndVersion(platform, newVersion);
+        
+        if (existingVersion.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+                "Version " + newVersion + " does not exist for platform " + platform);
+        }
+
+        int updated = deviceRepository.updateUserVersion(user, platform, newVersion, LocalDateTime.now());
+
+        if (updated > 0) {
+            log.info("Admin updated device version for user id: {}", userId);
+            return ResponseEntity.ok().body(Map.of(
+                "message", "Device version updated successfully by admin",
+                "userId", userId,
+                "platform", platform,
+                "newVersion", newVersion
+            ));
+        } else {
+            log.warn("Device not found for user id: {}, creating new", userId);
+            UserDevice device = new UserDevice(user, platform, newVersion);
+            device.setLastUpdateLog(LocalDateTime.now());
+            deviceRepository.save(device);
+            return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "message", "New device created with version by admin",
+                "userId", userId,
+                "platform", platform,
+                "newVersion", newVersion
+            ));
+        }
     }
 }
