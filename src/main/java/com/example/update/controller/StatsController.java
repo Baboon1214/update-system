@@ -43,19 +43,24 @@ public class StatsController {
 
         StringBuilder csv = new StringBuilder();
         
-        // Заголовки с разделителем (точка с запятой для русской версии Excel)
-        csv.append("Version;Platform;UsersCount;UpdateRate(%)\n");
+        csv.append("Version;UpdateType;Platform;UsersCount;UpdateRate(%)\n");
         
-        // Данные
         for (UpdateStatsDTO dto : stats) {
-            for (Map.Entry<String, Integer> entry : dto.getUsersCount().entrySet()) {
-                String version = dto.getVersion();
+            String version = dto.getVersion();
+            String updateType = dto.getUpdateType() != null ? dto.getUpdateType() : "UNKNOWN";
+            
+            Map<String, Integer> usersCount = dto.getUsersCount();
+            Map<String, Double> platformRates = dto.getPlatformRates();
+            
+            for (Map.Entry<String, Integer> entry : usersCount.entrySet()) {
                 String platform = entry.getKey();
-                int usersCount = entry.getValue();
-                double updateRate = dto.getGlobalUpdateRate();
+                int count = entry.getValue();
                 
-                csv.append(String.format("%s;%s;%d;%.2f\n", 
-                    version, platform, usersCount, updateRate));
+                // 👇 БЕРЁМ ПРОЦЕНТ ИМЕННО ДЛЯ ЭТОЙ ПЛАТФОРМЫ
+                double rate = platformRates != null ? platformRates.getOrDefault(platform, 0.0) : 0.0;
+                
+                csv.append(String.format("%s;%s;%s;%d;%.2f\n", 
+                    version, updateType, platform, count, rate));
             }
         }
 

@@ -50,7 +50,7 @@ public class VersionController {
     @Operation(summary = "Создать новую версию (только для ADMIN)")
     public ResponseEntity<AppVersion> create(
             @Valid @RequestBody 
-            @Schema(example = "{\"version\":\"1.0.0\",\"platform\":\"android\",\"changelog\":\"First release\",\"updateType\":\"OPTIONAL\",\"active\":true}")
+            @Schema(example = "{\"version\":\"1.0.0\",\"platform\":\"android\",\"changelog\":\"First release\",\"active\":true}")
             AppVersionRequest request) {
         log.info("Creating new version: {} for platform {}", request.getVersion(), request.getPlatform());
 
@@ -58,7 +58,15 @@ public class VersionController {
         version.setVersion(request.getVersion());
         version.setPlatform(request.getPlatform());
         version.setChangelog(request.getChangelog());
-        version.setUpdateType(request.getUpdateType());
+        
+        // 👇 АВТОМАТИЧЕСКОЕ ОПРЕДЕЛЕНИЕ updateType
+        String updateType = request.getUpdateType();
+        if (updateType == null || updateType.isBlank()) {
+            updateType = determineUpdateType(request.getVersion());
+            log.info("Auto-determined updateType: {} for version {}", updateType, request.getVersion());
+        }
+        version.setUpdateType(updateType);
+        
         version.setActive(request.isActive());
 
         AppVersion saved = repository.save(version);
@@ -107,5 +115,36 @@ public class VersionController {
         log.info("Getting latest version for platform: {}", platform);
         Optional<AppVersion> latest = repository.findTopByPlatformAndActiveTrueOrderByReleaseDateDesc(platform);
         return latest.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // 👇 ВСПОМОГАТЕЛЬНЫЙ МЕТОД ДЛЯ ОПРЕДЕЛЕНИЯ ТИПА ОБНОВЛЕНИЯ
+    private String determineUpdateType(String newVersion) {
+        // Получаем последнюю версию (для любой платформы)
+        Optional<AppVersion> latestOpt = repository.findTopByOrderByReleaseDateDesc();
+        if (latestOpt.isEmpty()) {
+            return "OPTIONAL";
+        }
+        
+        String latestVersion = latestOpt.get().getVersion();
+        String[] newParts = newVersion.split("\\.");
+        String[] latestParts = latestVersion.split("\\.");
+        
+        try {
+            int newMajor = Integer.parseInt(newParts[0]);
+            int latestMajor = Integer.parseInt(latestParts[0]);
+            int newMinor = Integer.parseInt(newParts[1]);
+            int latestMinor = Integer.parseInt(latestParts[1]);
+            
+            if (newMajor > latestMajor) {
+                return "MANDATORY";
+            } else if (newMajor == latestMajor && newMinor > latestMinor) {
+                return "RECOMMENDED";
+            } else {
+                return "OPTIONAL";
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse version numbers: {}, {}", newVersion, latestVersion);
+            return "OPTIONAL";
+        }
     }
 }

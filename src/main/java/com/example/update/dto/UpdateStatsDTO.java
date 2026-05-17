@@ -4,36 +4,24 @@ import java.util.Map;
 
 public class UpdateStatsDTO {
     private String version;
+    private String updateType;
     private Map<String, Integer> usersCount;
-    private double globalUpdateRate;
+    private Map<String, Double> platformRates;
+    private Double globalUpdateRate;  // 👈 ДОБАВЛЕНО
 
-    public UpdateStatsDTO(String version, Map<String, Integer> usersCount, double globalUpdateRate) {
-        this.version = version;
-        this.usersCount = usersCount;
-        this.globalUpdateRate = globalUpdateRate;
-    }
+    // Геттеры и сеттеры
+    public String getVersion() { return version; }
+    public void setVersion(String version) { this.version = version; }
 
-    public String getVersion() {
-        return version;
-    }
+    public String getUpdateType() { return updateType; }
+    public void setUpdateType(String updateType) { this.updateType = updateType; }
 
-    public void setVersion(String version) {
-        this.version = version;
-    }
+    public Map<String, Integer> getUsersCount() { return usersCount; }
+    public void setUsersCount(Map<String, Integer> usersCount) { this.usersCount = usersCount; }
 
-    public Map<String, Integer> getUsersCount() {
-        return usersCount;
-    }
+    public Map<String, Double> getPlatformRates() { return platformRates; }
+    public void setPlatformRates(Map<String, Double> platformRates) { this.platformRates = platformRates; }
 
-    public void setUsersCount(Map<String, Integer> usersCount) {
-        this.usersCount = usersCount;
-    }
-
-    public double getGlobalUpdateRate() {
-        return globalUpdateRate;
-    }
-
-    public void setGlobalUpdateRate(double globalUpdateRate) {
-        this.globalUpdateRate = globalUpdateRate;
-    }
+    public Double getGlobalUpdateRate() { return globalUpdateRate; }
+    public void setGlobalUpdateRate(Double globalUpdateRate) { this.globalUpdateRate = globalUpdateRate; }
 }
